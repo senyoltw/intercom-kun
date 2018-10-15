@@ -53,10 +53,6 @@ def main():
     button = aiy.voicehat.get_button()
     led = aiy.voicehat.get_led()
     player=aiy.audio.get_player()
-
-    text_to_slack = post_to_slack.text_to_slack()
-    cap_to_slack = post_to_slack.cap_to_slack()
-    
     text_recognizer = detect_intent_texts.get_recognizer()
     aiy.audio.get_recorder().start()
 
