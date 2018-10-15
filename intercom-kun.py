@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 
 import mod.snowboydecoder as snowboydecoder
+import mod.detect_intent_texts as detect_intent_texts
 
 import sys
 import os
@@ -12,15 +13,14 @@ import uuid
 import logging
 import threading
 
-import requests
-import json
-
 import aiy.audio
 import aiy.cloudspeech
 import aiy.voicehat
 import aiy.i18n
 
-import mod.detect_intent_texts as detect_intent_texts
+import detect_motion
+import play_voice
+import post_to_slack
 
 #Slack token and channel
 TOKEN = '好きなトークンを入れてね'
@@ -41,71 +41,9 @@ if len(sys.argv) == 1:
 
 model = sys.argv[1]
 
-#lang code and uuid
+#i18n and uuid
 aiy.i18n.set_language_code('ja-JP')
 myuuid = str(uuid.uuid4())
-
-def detect_motion(cap):
-    avg = None
-    while(cap.isOpened()):
-        ret, frame = cap.read()
-        frame = cv2.flip(frame, -1) #カメラ上下左右反転
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        if avg is None:
-            avg = gray.copy().astype('float')
-            continue
-
-        #加重平均によるフレーム差分
-        cv2.accumulateWeighted(gray, avg, 0.5)
-        frameDelta = cv2.absdiff(gray, cv2.convertScaleAbs(avg))
-        thresh = cv2.threshold(frameDelta, 3, 255, cv2.THRESH_BINARY)[1]
-        contours = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[1]
-        max_area = 0
-        for cnt in contours:
-            area = cv2.contourArea(cnt)
-            if max_area < area and area < 10000 and area > 1000:
-                max_area = area
-        if max_area > 1000:
-            #print('hit motion')
-            break
-    else:
-        cap.release()
-        #sys.exit(1)
-
-
-def text_to_slack(text):
-    #post to slack
-    param = {
-        'token':TOKEN,
-        'channel':CHANNEL,
-        'text':text,
-        'as_user':'true'
-    }
-    requests.post(url="https://slack.com/api/chat.postMessage",params=param)
-
-
-def cap_to_slack(cap, text):
-    ret, frame = cap.read()
-    frame = cv2.flip(frame, -1) #カメラ上下左右反転
-
-    #画面の輝度補正｡暗いとき用
-    #frame = (frame - np.mean(frame))/np.std(frame)*16+96
-
-    path = "photo.jpg"
-    cv2.imwrite(path,frame)
-
-    #post to slack
-    files = {'file': open("photo.jpg", 'rb')}
-    param = {
-        'token':TOKEN,
-        'channels':CHANNEL,
-        #'filename':"filename",
-        'initial_comment':text,
-        #'title': "title"
-    }
-    requests.post(url="https://slack.com/api/files.upload",params=param, files=files)
-    os.remove('photo.jpg')
-
 
 def main():
     recognizer = aiy.cloudspeech.get_recognizer()
