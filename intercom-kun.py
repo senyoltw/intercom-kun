@@ -106,6 +106,15 @@ def cap_to_slack(cap, text):
     requests.post(url="https://slack.com/api/files.upload",params=param, files=files)
     os.remove('photo.jpg')
 
+def play_voice(voice_name):
+    voice_path = os.path.join(os.path.dirname(__file__), 'voice', voice_name) + '.wav'
+    print(voice_path, 'find...')
+    if os.path.exists(voice_path) == True:
+       print('voice', voice_path, 'found!')
+       print('voice play start!')
+       aiy.audio.play_wave(voice_path)
+       print('voice play end!')
+
 
 def main():
     recognizer = aiy.cloudspeech.get_recognizer()
@@ -168,6 +177,7 @@ def main():
                 print('text 2 slack')
                 slack_text = ':robot_face: イン君 : ' + answer.query_result.fulfillment_text
                 text_to_slack(slack_text)
+                play_voice(answer.query_result.fulfillment_text)
 
                 to_the_end = answer.query_result.all_required_params_present
                 if to_the_end == False:
